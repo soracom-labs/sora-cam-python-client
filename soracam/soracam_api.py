@@ -376,7 +376,8 @@ class SoraCamClient(object):
         return off_line_devices
 
     def get_devices_events(self, device_id: str = None, limit: int = 10,
-                           sort: str = 'desc', label: str = None) -> dict:
+                           sort: str = 'desc', label: str = None,
+                           from_t: int = None, to_t: int = None) -> dict:
         """
         Gets the events of a device.
 
@@ -385,6 +386,8 @@ class SoraCamClient(object):
             limit (int): The number of events to return.
             sort (str): The sort order.
             label (str): The label for the event.
+            from_t (int): The start timestamp for the events.
+            to_t (int): The end timestamp for the the events.
 
         Returns:
             dict: Dictionary contains the list of events of the device.
@@ -400,7 +403,10 @@ class SoraCamClient(object):
         # create path parameters
         params = {'limit': limit}
         params['sort'] = sort
-
+        if from_t:
+            params['from'] = from_t
+        if to_t:
+            params['to'] = to_t
         params['search_type'] = 'or'
         events = self._get(url, params)
         if label:
