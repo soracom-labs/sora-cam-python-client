@@ -3,7 +3,7 @@
 import time
 from unittest.mock import patch
 
-from soracam.soracam_api import SoraCamClient as sc
+import soracam as sc
 
 from .conftest import (
     _VIDEO_DURATION, _VIDEO_OFFSET, logger, download_file_and_check_mime_type)
