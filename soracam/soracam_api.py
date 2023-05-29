@@ -11,7 +11,8 @@ import time
 from urllib.parse import urljoin
 import requests
 from urllib.parse import unquote, urlparse
-import soracam
+from .soracam_api_config import *
+
 
 _DEBUG = os.environ.get('DEBUG', 'True').lower() in ['true', '1']
 
@@ -24,6 +25,11 @@ if _DEBUG:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
+
+_REQUESTS_TIMEOUT = os.environ.get('REQUESTS_TIMEOUT', 60)
+_MAX_API_RETRIES = os.environ.get('MAX_RETRIES', MAX_API_RETRIES)
+_SORACOM_ENDPOINT = os.environ.get('SORACOM_ENDPOINT',
+                                   SORACOM_ENDPOINT)
 
 
 class SoraCamClient(object):
@@ -46,7 +52,7 @@ class SoraCamClient(object):
         """
 
         self.request_headers = {'Content-type': 'application/json'}
-        self.api_endpoint = "https://%s.api.soracom.io/" % coverage_type
+        self.api_endpoint = _SORACOM_ENDPOINT % coverage_type
         self.auth_key_id = auth_key_id
         self.auth_key = auth_key
 
@@ -59,7 +65,7 @@ class SoraCamClient(object):
         try:
             response = requests.post(
                 url=url, json=payload,
-                timeout=soracam.REQUESTS_TIMEOUT)
+                timeout=_REQUESTS_TIMEOUT)
         except Exception as error:
             logger.error(f"failed to authenticate: {error}")
             raise error
@@ -85,16 +91,19 @@ class SoraCamClient(object):
         Raises:
             Exception: If an error occurs while sending the GET request.
         """
-        try:
-            response = requests.get(
-                url=url, headers=next(self._soracom_headers()),
-                timeout=soracam.REQUESTS_TIMEOUT, params=params)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.HTTPError as err:
-            logger.error(f"get request for {url} failed: {err}")
-            logger.error(f"response: {response.text}")
-            raise
+        for i in range(_MAX_API_RETRIES):
+            try:
+                response = requests.get(
+                    url=url, headers=next(self._soracom_headers()),
+                    timeout=_REQUESTS_TIMEOUT, params=params)
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.HTTPError as err:
+                logger.error(f"post request for {url} failed: {err}")
+                if response.status_code == 429:
+                    time.sleep(RETRY_INTERVAL)
+                else:
+                    raise
 
     def _post(self, url: str, payload: str) -> dict:
         """
@@ -111,16 +120,19 @@ class SoraCamClient(object):
             Exception: If an error occurs while sending the POST request.
         """
         logger.debug(f"payload: {payload}")
-        try:
-            response = requests.post(
-                url=url, headers=next(self._soracom_headers()),
-                json=payload, timeout=soracam.REQUESTS_TIMEOUT)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.HTTPError as err:
-            logger.error(f"post request for {url} failed: {err}")
-            logger.error(f"response: {response.text}")
-            raise
+        for i in range(_MAX_API_RETRIES):
+            try:
+                response = requests.post(
+                    url=url, headers=next(self._soracom_headers()),
+                    json=payload, timeout=_REQUESTS_TIMEOUT)
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.HTTPError as err:
+                logger.error(f"post request for {url} failed: {err}")
+                if response.status_code == 429:
+                    time.sleep(RETRY_INTERVAL)
+                else:
+                    raise
 
     def _check_export_status(self, device_id: str, export_id: str,
                              media: str, expected: str = "completed") -> bool:
@@ -142,22 +154,22 @@ class SoraCamClient(object):
             timeout.
         """
 
-        path = os.path.join(soracam.SORA_CAM_BASE_URL,
+        path = os.path.join(SORA_CAM_BASE_URL,
                             device_id, media, "exports", export_id)
         url = urljoin(self.api_endpoint, path)
         start_time = time.time()
-        while (time.time() - start_time < soracam.WAITE_TIMEOUT):
+        while (time.time() - start_time < WAITE_TIMEOUT):
             response = self._get(url)
-            logger.debug("export status: {}".format(response))
+            logger.debug(f"export status: {response}")
             status = response.get('status', '')
             if status == expected:
                 return True
             elif status == "failed":
-                raise soracam.ExportFailedError(
+                raise ExportFailedError(
                     f"Export failed for device {device_id}, \
                     export {export_id}")
-            time.sleep(soracam.LOOP_WAITE_TIME)
-        raise soracam.ExportTimeoutError(
+            time.sleep(LOOP_WAITE_TIME)
+        raise ExportTimeoutError(
             f"Checking export status timed out \
             for device {device_id}, export {export_id}")
 
@@ -182,21 +194,21 @@ class SoraCamClient(object):
         requests.exceptions.HTTPError: If an HTTP error occurs while trying to
         download the file.
         """
-
-        try:
-            response = requests.get(target_url, stream=True)
-        except requests.exceptions.HTTPError as err:
-            logger.error("download file from {0} failed: {1}"
-                         .format(target_url, err))
-            raise
         path = urlparse(target_url).path
         filename = unquote(path.split("/")[-1])
         save_path = os.path.join(target_directory, filename)
-        with open(save_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
+        logger.debug(f"save file to: {save_path} from: {target_url}")
+        try:
+            with requests.get(target_url, stream=True,
+                              timeout=_REQUESTS_TIMEOUT) as r:
+                with open(save_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
             return save_path
+        except requests.exceptions.HTTPError as err:
+            logger.error(f"download file from {target_url} failed: {err}")
+            raise
 
     def post_images_export_requests(
             self, device_id: str, wide_angle_correction: bool = True,
@@ -219,7 +231,7 @@ class SoraCamClient(object):
             processing the response.
         """
 
-        path = os.path.join(soracam.SORA_CAM_BASE_URL,
+        path = os.path.join(SORA_CAM_BASE_URL,
                             device_id, 'images/exports')
         url = urljoin(self.api_endpoint, path)
         if not export_time:
@@ -250,11 +262,11 @@ class SoraCamClient(object):
             processing the response.
         """
 
-        path = os.path.join(soracam.SORA_CAM_BASE_URL,
+        path = os.path.join(SORA_CAM_BASE_URL,
                             device_id, 'images/exports', export_id)
         url = urljoin(self.api_endpoint, path)
         if self._check_export_status(device_id, export_id,
-                                     soracam.MEDIA_IMAGE):
+                                     MEDIA_IMAGE):
             return self._get(url)
 
     def get_stream(
@@ -274,7 +286,7 @@ class SoraCamClient(object):
             Exception: If an error occurs while sending the POST request or
             processing the response.
         """
-        path = os.path.join(soracam.SORA_CAM_BASE_URL,
+        path = os.path.join(SORA_CAM_BASE_URL,
                             device_id, 'stream')
         url = urljoin(self.api_endpoint, path)
 
@@ -304,7 +316,7 @@ class SoraCamClient(object):
             processing the response.
         """
 
-        path = os.path.join(soracam.SORA_CAM_BASE_URL,
+        path = os.path.join(SORA_CAM_BASE_URL,
                             device_id, 'videos/exports')
         url = urljoin(self.api_endpoint, path)
 
@@ -334,11 +346,11 @@ class SoraCamClient(object):
             processing the response.
         """
 
-        path = os.path.join(soracam.SORA_CAM_BASE_URL,
+        path = os.path.join(SORA_CAM_BASE_URL,
                             device_id, 'videos/exports', export_id)
         url = urljoin(self.api_endpoint, path)
         if self._check_export_status(device_id, export_id,
-                                     soracam.MEDIA_VIDEO):
+                                     MEDIA_VIDEO):
             return self._get(url)
 
     def get_devices(self) -> dict:
@@ -352,7 +364,7 @@ class SoraCamClient(object):
             Exception: If an error occurs while sending the POST request or
             processing the response.
         """
-        url = urljoin(self.api_endpoint, soracam.SORA_CAM_BASE_URL)
+        url = urljoin(self.api_endpoint, SORA_CAM_BASE_URL)
         return self._get(url)
 
     def get_offline_devices(self) -> list:
@@ -396,9 +408,9 @@ class SoraCamClient(object):
             Exception: If an error occurs while sending the POST request or
             processing the response.
         """
-        path = os.path.join(soracam.SORA_CAM_BASE_URL, 'events') \
+        path = os.path.join(SORA_CAM_BASE_URL, 'events') \
             if not device_id else os.path.join(
-            soracam.SORA_CAM_BASE_URL, device_id, 'events')
+            SORA_CAM_BASE_URL, device_id, 'events')
         url = urljoin(self.api_endpoint, path)
         # create path parameters
         params = {'limit': limit}
@@ -411,7 +423,7 @@ class SoraCamClient(object):
         events = self._get(url, params)
         if label:
             return [ev for ev in events if label in ev.get(
-                'eventInfo', {}).get('atomEventV1', {}).get('labels', [])]
+                'eventInfo', {}).get('atomEventV1', {}).get('type', [])]
         return events
 
     def get_device(self, device_id=None) -> dict:
@@ -426,6 +438,6 @@ class SoraCamClient(object):
             processing the response.
         """
         # Join base_url and endpoint
-        device_path = os.path.join(soracam.SORA_CAM_BASE_URL, device_id)
+        device_path = os.path.join(SORA_CAM_BASE_URL, device_id)
         url = urljoin(self.api_endpoint, device_path)
         return self._get(url)

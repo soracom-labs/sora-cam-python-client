@@ -10,8 +10,7 @@ import glob
 import tempfile
 import pytest
 from dotenv import load_dotenv
-
-from soracam.soracam_api import SoraCamClient as sc
+import soracam as sc
 
 load_dotenv()
 
@@ -40,7 +39,7 @@ def sora_cam_client():
     auth_key = os.environ.get(
         "SORACOM_AUTH_KEY",
         "")
-    client = sc(
+    client = sc.SoraCamClient(
         coverage_type='jp',
         auth_key_id=auth_key_id,
         auth_key=auth_key)
