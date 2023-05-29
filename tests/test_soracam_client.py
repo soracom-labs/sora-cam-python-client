@@ -67,6 +67,19 @@ def test_get_devices_events_with_label(sora_cam_client, soracom_device):
         "there should be device_event with person"
 
 
+def test_get_devices_events_with_from_to(sora_cam_client, soracom_device):
+    # assume there are several device events,
+    # otherwise the tests fails
+    from_t = 1640962800 * 1000
+    to_t = int(time.time()) * 1000
+    device_event = sora_cam_client.get_devices_events(
+        soracom_device, from_t=from_t, to_t=to_t, limit=10, sort='desc',
+        label='motion')
+    logger.debug(device_event)
+    assert len(device_event), \
+        "there should be device_event"
+
+
 def test_post_and_get_images_export_requests(
         sora_cam_client, soracom_device):
     res = sora_cam_client.post_images_export_requests(
@@ -90,6 +103,7 @@ def test_post_and_get_videos_export_requests(
 
     res = sora_cam_client.post_videos_export_requests(
         soracom_device, from_t, to_t)
+    logger.debug(f"response: {res}")
     export_id = res.get('exportId', '')
     assert export_id, \
         "exportId must be included"
