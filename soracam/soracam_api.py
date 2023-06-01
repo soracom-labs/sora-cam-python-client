@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 import requests
 from urllib.parse import unquote, urlparse
 from .soracam_api_config import *
+from .soracam_error import *
 
 
 _DEBUG = os.environ.get('DEBUG', 'True').lower() in ['true', '1']
