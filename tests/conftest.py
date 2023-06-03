@@ -61,7 +61,7 @@ def soracom_device(sora_cam_client):
 
 def download_file_and_check_mime_type(url, out_file):
     with tempfile.TemporaryDirectory() as dname:
-        save_path = sc.download_file_from_url(url, dname)
+        save_path = sc.SoraCamClient.download_file_from_url(url, dname)
         if save_path:
             if pathlib.Path(save_path).suffix == ".zip":
                 logger.info("f_name: {save_path}")

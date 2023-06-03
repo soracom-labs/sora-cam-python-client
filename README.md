@@ -4,13 +4,18 @@ This python library provides a client to interact with the Soracom API. It allow
 
 ## Features
 
-- Get devices
-- Get offline devices
-- Get device events
-- Start the process of exporting still images or videos from recorded data
-- Retrieve a stream from a specific device for a given time range
-- Check the export status of a device
-- Get the result of the get images or videos exports request
+- `get_devices`: Gets the list of devices information.
+- `get_device`: Gets the device information.
+- `get_offline_devices`: GGets the list of offline devices.
+- `get_devices_events`: Gets the events of a device.
+- `get_stream`: Sends a get stream request from recorded video.
+- `post_videos_export_requests`: Sends an exporting video request from recorded video.
+- `get_videos_exports`: Return the result of the video exports request.
+- `post_images_export_requests`: Exports a image from a recorded video
+- `get_images_exports`: Return the result of the images exports request.
+- `download_file_from_url`: Downloads a file from the specified URL and saves it to the specified
+        path.
+
 
 ## Installation
 
