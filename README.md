@@ -1,6 +1,6 @@
 # SoraCam Python Client
 
-This python library provides a client to interact with the Soracom API. It allows to make authenticated requests to the API and handle the response.
+This python library provides a client to interact with [SoraCam API](https://users.soracom.io/ja-jp/tools/api/reference/#/SoraCam). It allows to make authenticated requests to the API and handle the response.
 
 ## Features
 
@@ -23,3 +23,32 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install SoraCam
 
 ```bash
 pip install git+https://github.com/soracom-labs/sora-cam-python-client
+```
+
+## Usage
+
+```python
+import soracam as sc
+
+# create soracam client
+clinet = sc.SoraCamClient(
+        coverage_type='jp',
+        auth_key_id=auth_key_id,
+        auth_key=auth_key)
+
+# get device list
+device_list = client.get_devices()
+
+```
+For more information, please see docstring in [soracam_api.py](https://github.com/soracom-labs/sora-cam-python-client/soracam/soracom_api.py)
+
+## Configuration
+
+The following environment variables can be used to configure the client:
+
+- `SORACOM_ENDPOINT`: Endpoint to connect to the SORACOM API server (default: https://%s.api.soracom.io/).
+- `MAX_RETRIES`: API retries if HTTPError is returned (default: 3).
+- `REQUESTS_TIMEOUT`: Timeout for API requests (default: 60).
+
+## License
+This project is open source and available under the MIT License.

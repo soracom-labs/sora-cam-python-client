@@ -27,7 +27,7 @@ else:
     logger.setLevel(logging.INFO)
 
 _REQUESTS_TIMEOUT = os.environ.get('REQUESTS_TIMEOUT', sc.REQUESTS_TIMEOUT)
-_MAX_API_RETRIES = os.environ.get('MAX_RETRIES', sc.MAX_API_RETRIES)
+_MAX_API_RETRIES = os.environ.get('MAX_API_RETRIES', sc.MAX_API_RETRIES)
 _SORACOM_ENDPOINT = os.environ.get(
     'SORACOM_ENDPOINT', sc.SORACOM_ENDPOINT)
 
