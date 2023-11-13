@@ -163,3 +163,20 @@ def test_negative_post_videos_export_requests_parallel(
                 print('task returned: ', export_id)
             except Exception as error:
                 print(f"task generated an exception: {error}")
+
+def test_get_device_recordings_and_events(sora_cam_client, soracom_device):
+    res = sora_cam_client.get_device_recordings_and_events(
+            soracom_device)
+    logger.debug(f"device recordings and events: {res}")
+    assert len(res), \
+            "there should be device_recordings_and_events"
+
+def test_get_device_recordings_and_events_with_from_t(
+        sora_cam_client, soracom_device):
+    from_t = 1640962800 * 1000
+    to_t = int(time.time()) * 1000
+    res = sora_cam_client.get_device_recordings_and_events(
+            soracom_device, from_t=from_t, to_t=to_t, sort='desc')
+    logger.debug(f"device recordings and events: {res}")
+    assert len(res), \
+            "there should be device_recordings_and_events"
