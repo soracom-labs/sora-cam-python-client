@@ -15,6 +15,9 @@ This python library provides a client to interact with [SoraCam API](https://use
 - `get_images_exports`: Return the result of the images exports request.
 - `download_file_from_url`: Downloads a file from the specified URL and saves it to the specified
         path.
+- `get_device_recordings_and_events`: Gets the device recordings duration and events.
+- `get_settings`: Gets the settings of sora_cam.
+- `post_settings`: Sends a request to change settings of sora_cam.
 
 
 ## Installation
