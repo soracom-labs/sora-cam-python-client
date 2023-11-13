@@ -450,3 +450,19 @@ class SoraCamClient(object):
         device_path = os.path.join(sc.SORA_CAM_BASE_URL, device_id)
         url = urljoin(self.api_endpoint, device_path)
         return self._get(url)
+
+    def get_device_recordings_and_events(self, device_id: str = None, last_evaluated_key: str = None, from_t: int = None, to_t: int = None, sort: str = 'desc') -> dict:
+        """
+        Gets the recordings and events.
+        """
+        device_path = os.path.join(sc.SORA_CAM_BASE_URL, device_id, 'recordings_and_events')
+        url = urljoin(self.api_endpoint, device_path)
+        params = {'sort': sort}
+        if last_evaluated_key:
+            params['last_evaluated_key'] = last_evaluated_key
+        if from_t:
+            params['from'] = from_t
+        if to_t:
+            params['to'] = to_t
+        recordings_and_events = self._get(url, params)
+        return recordings_and_events
