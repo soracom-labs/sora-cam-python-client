@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from .conftest import (
     _VIDEO_DURATION,
     _VIDEO_OFFSET,
+    _BEFOR_ONE_WEEK_FROM_T,
     logger,
     download_file_and_check_mime_type,
 )
@@ -50,13 +51,17 @@ def test_get_offline_devices(sora_cam_client):
     if off_line:
         assert len(off_device_list), "there should be no offline device"
     else:
-        assert not len(off_device_list), "there should be more than one offline device"
+        assert not len(
+            off_device_list
+        ), "there should be more than one offline device"
 
 
 def test_get_devices_events(sora_cam_client, soracom_device):
     # assume there are several device events,
     # otherwise the tests fails
-    device_event = sora_cam_client.get_devices_events(soracom_device)
+    device_event = sora_cam_client.get_devices_events(
+        soracom_device, limit=100
+    )
     logger.debug(f"devices events: {device_event}")
     assert len(device_event), "there should be device_event"
 
@@ -65,7 +70,7 @@ def test_get_devices_events_with_label(sora_cam_client, soracom_device):
     # assume there are events with person label,
     # otherwise the tests fails
     device_event = sora_cam_client.get_devices_events(
-        soracom_device, limit=10, label="person"
+        soracom_device, limit=100, label="person"
     )
     logger.debug(f"devices events: {device_event}")
     assert len(device_event), "there should be device_event with person"
@@ -74,10 +79,15 @@ def test_get_devices_events_with_label(sora_cam_client, soracom_device):
 def test_get_devices_events_with_from_to(sora_cam_client, soracom_device):
     # assume there are several device events,
     # otherwise the tests fails
-    from_t = 1640962800 * 1000
+    from_t = _BEFOR_ONE_WEEK_FROM_T
     to_t = int(time.time()) * 1000
     device_event = sora_cam_client.get_devices_events(
-        soracom_device, from_t=from_t, to_t=to_t, limit=3, sort="desc", label="motion"
+        soracom_device,
+        from_t=from_t,
+        to_t=to_t,
+        limit=100,
+        sort="desc",
+        label="motion",
     )
     logger.debug(f"devices events: {device_event}")
     assert len(device_event), "there should be device_event"
@@ -100,7 +110,9 @@ def test_post_and_get_videos_export_requests(sora_cam_client, soracom_device):
     from_t = int((time.time() - _VIDEO_DURATION - _VIDEO_OFFSET) * 1000)
     to_t = from_t + _VIDEO_DURATION
 
-    res = sora_cam_client.post_videos_export_requests(soracom_device, from_t, to_t)
+    res = sora_cam_client.post_videos_export_requests(
+        soracom_device, from_t, to_t
+    )
     logger.debug(f"response: {res}")
     export_id = res.get("exportId", "")
     assert export_id, "exportId must be included"
@@ -146,7 +158,9 @@ def test_negative_check_export_status_failed(sora_cam_client, soracom_device):
     reason="NEGATIVE_TEST \
     environment variable is not set",
 )
-def test_negative_post_videos_export_requests_parallel(sora_cam_client, soracom_device):
+def test_negative_post_videos_export_requests_parallel(
+    sora_cam_client, soracom_device
+):
     from_t = int((time.time() - _VIDEO_DURATION - _VIDEO_OFFSET) * 1000)
     to_t = from_t + _VIDEO_DURATION
     export_request = (soracom_device, from_t, to_t)
@@ -172,8 +186,10 @@ def test_get_device_recordings_and_events(sora_cam_client, soracom_device):
     assert len(res), "failed receive recordings and events"
 
 
-def test_get_device_recordings_and_events_with_from_t(sora_cam_client, soracom_device):
-    from_t = 1640962800 * 1000
+def test_get_device_recordings_and_events_with_from_t(
+    sora_cam_client, soracom_device
+):
+    from_t = _BEFOR_ONE_WEEK_FROM_T
     to_t = int(time.time()) * 1000
     res = sora_cam_client.get_device_recordings_and_events(
         soracom_device, from_t=from_t, to_t=to_t, sort="desc"
@@ -193,7 +209,9 @@ settings_test_cases = [
 ]
 
 
-@pytest.mark.parametrize("setting, payload, expected_get_response", settings_test_cases)
+@pytest.mark.parametrize(
+    "setting, payload, expected_get_response", settings_test_cases
+)
 def test_post_and_get_settings(
     sora_cam_client, soracom_device, setting, payload, expected_get_response
 ):
