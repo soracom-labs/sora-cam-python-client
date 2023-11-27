@@ -11,6 +11,7 @@ import tempfile
 import pytest
 from dotenv import load_dotenv
 import soracam as sc
+import time
 
 load_dotenv()
 
@@ -19,6 +20,8 @@ _VIDEO_OFFSET = os.environ.get('VIDEO_OFFSET', 1000)
 _DEVICE_ID = os.environ.get('DEVICE_ID', '')
 
 _DEBUG = os.environ.get('DEBUG', 'True').lower() in ['true', '1']
+
+_BEFOR_ONE_WEEK_FROM_T = (int(time.time()) - (7 * 24 * 60 * 60)) * 1000
 
 # log settings
 FORMAT = '%(levelname)s %(asctime)s \
